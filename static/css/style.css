@@ -1,0 +1,100 @@
+/* Custom styles for the NewsNow application */
+
+/* Body styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* Header styles */
+header {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    font-weight: 600;
+}
+
+/* Card styles */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.card-img-top {
+    height: 180px;
+    object-fit: cover;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.card-text {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Category buttons */
+.btn-outline-light.active {
+    background-color: #fff;
+    color: #212529;
+}
+
+/* Footer styles */
+footer {
+    border-top: 1px solid #eee;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+    .card-img-top {
+        height: 150px;
+    }
+    
+    header .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    body.dark-mode {
+        background-color: #121212;
+        color: #e0e0e0;
+    }
+    
+    body.dark-mode .card {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+    }
+    
+    body.dark-mode .card-text {
+        color: #aaa;
+    }
+    
+    body.dark-mode .text-muted {
+        color: #aaa !important;
+    }
+    
+    body.dark-mode footer {
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+    }
+    
+    body.dark-mode .text-dark {
+        color: #e0e0e0 !important;
+    }
+} 

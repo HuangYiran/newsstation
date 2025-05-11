@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <style>
+        .news-source-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: nowrap;
+        }
+        .source-title-area {
+            flex: 1;
+            min-width: 0;
+            padding-right: 15px;
+        }
+        .source-title-area h4 {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .card-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .source-sort-select {
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+            height: auto;
+            width: 110px;
+        }
+        .news-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .news-item:last-child {
+            border-bottom: none;
+        }
+        .news-item h5 {
+            margin-bottom: 5px;
+            cursor: pointer;
+            color: #0d6efd;
+            display: flex;
+        }
+        .news-item h5:hover {
+            text-decoration: underline;
+        }
+        .news-item .summary {
+            display: none;
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .news-number {
+            min-width: 30px;
+            font-weight: bold;
+            color: #888;
+            margin-right: 5px;
+            flex-shrink: 0;
+        }
+        .sort-options {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <header class="bg-dark text-white p-3">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 m-0">NewsStation</h1>
+                <div>
+                    <a href="/" class="btn btn-sm btn-outline-light">Realtime</a>
+                    <a href="/c/technology" class="btn btn-sm btn-outline-light {% if category == 'technology' %}active{% endif %}">Technology</a>
+                    <a href="/c/world" class="btn btn-sm btn-outline-light {% if category == 'world' %}active{% endif %}">World</a>
+                    <a href="/c/business" class="btn btn-sm btn-outline-light {% if category == 'business' %}active{% endif %}">Business</a>
+                    <a href="/c/health" class="btn btn-sm btn-outline-light {% if category == 'health' %}active{% endif %}">Health</a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container py-4">
+        <h2 class="mb-3">{{ category|capitalize }} News</h2>
+        
+        <div id="news-container">
+            <div class="text-center my-5">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">加载新闻中...</p>
+            </div>
+        </div>
+    </main>
+    
+    <footer class="bg-light p-3 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0">&copy; 2025 NewsStation. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="#" class="text-decoration-none text-dark me-3">About</a>
+                    <a href="#" class="text-decoration-none text-dark me-3">Terms</a>
+                    <a href="#" class="text-decoration-none text-dark">Privacy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', path='/js/main.js') }}"></script>
+    <script>
+        // Load news when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchNews('{{ category }}');
+        });
+        
+        // Store news data globally for sorting
+        window.newsData = null;
+        
+        function fetchNews(category, refresh = false) {
+            const newsContainer = document.getElementById('news-container');
+            newsContainer.innerHTML = `
+                <div class="text-center my-5">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">加载新闻中...</p>
+                </div>
+            `;
+            
+            // Fetch news from API
+            fetch(`/api/news?category=${category}&refresh=${refresh}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Check if we have articles
+                    if (!data.articles || data.articles.length === 0) {
+                        newsContainer.innerHTML = `
+                            <div class="alert alert-info" role="alert">
+                                该分类下暂无新闻，请稍后再试或切换其他分类。
+                            </div>
+                            <button class="btn btn-outline-primary refresh-btn">
+                                重试
+                            </button>
+                        `;
+                        
+                        const refreshBtn = document.querySelector('.refresh-btn');
+                        if (refreshBtn) {
+                            refreshBtn.addEventListener('click', function() {
+                                fetchNews(category, true);
+                            });
+                        }
+                        return;
+                    }
+                    
+                    // Store news data globally
+                    window.newsData = data;
+                    
+                    // Display the news
+                    displayNews(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching news:', error);
+                    newsContainer.innerHTML = `
+                        <div class="alert alert-danger" role="alert">
+                            加载新闻失败: ${error.message}. 请稍后再试.
+                        </div>
+                        <button class="btn btn-outline-primary refresh-btn">
+                            重试
+                        </button>
+                    `;
+                    
+                    // 添加刷新按钮事件监听
+                    const refreshBtn = document.querySelector('.refresh-btn');
+                    if (refreshBtn) {
+                        refreshBtn.addEventListener('click', function() {
+                            fetchNews(category, true);
+                        });
+                    }
+                });
+        }
+        
+        function displayNews(data) {
+            const newsContainer = document.getElementById('news-container');
+            newsContainer.innerHTML = '';
+            
+            // Group articles by source
+            const groupedArticles = {};
+            data.articles.forEach(article => {
+                const sourceId = article.source.id;
+                if (!groupedArticles[sourceId]) {
+                    groupedArticles[sourceId] = {
+                        source: article.source,
+                        articles: []
+                    };
+                }
+                groupedArticles[sourceId].articles.push(article);
+            });
+            
+            // Create HTML for each source group
+            let sortedGroups = Object.values(groupedArticles);
+            
+            // Create HTML for each source group
+            sortedGroups.forEach(group => {
+                const lastUpdated = new Date(Math.max(...group.articles.map(a => new Date(a.published_at))));
+                const formattedDate = `${lastUpdated.toLocaleDateString()} ${lastUpdated.toLocaleTimeString()}`;
+                const sourceId = group.source.id;
+                
+                const sourceHtml = `
+                    <div class="card mb-4" id="source-${sourceId}">
+                        <div class="card-header">
+                            <div class="news-source-header">
+                                <div class="source-title-area">
+                                    <h4 class="m-0">${group.source.name}</h4>
+                                    <small class="text-muted">最近更新: ${formattedDate}</small>
+                                </div>
+                                <div class="card-header-actions">
+                                    <select class="form-select form-select-sm source-sort-select" data-source="${sourceId}">
+                                        <option value="time">按时间排序</option>
+                                        <option value="likes">按点赞排序</option>
+                                        <option value="comments">按评论排序</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary refresh-source-btn" data-source="${sourceId}">
+                                        刷新
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="news-list" id="news-list-${sourceId}">
+                                ${renderArticles(group.articles, 'time')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                newsContainer.innerHTML += sourceHtml;
+            });
+            
+            // Add event listeners to refresh source buttons
+            document.querySelectorAll('.refresh-source-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const sourceId = this.getAttribute('data-source');
+                    refreshSource(sourceId, data.category);
+                });
+            });
+            
+            // Add event listeners to source sort selects
+            document.querySelectorAll('.source-sort-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const sourceId = this.getAttribute('data-source');
+                    const sortOption = this.value;
+                    const sourceArticles = groupedArticles[sourceId].articles;
+                    
+                    // Sort articles based on selected option
+                    const newsListContainer = document.getElementById(`news-list-${sourceId}`);
+                    if (newsListContainer) {
+                        newsListContainer.innerHTML = renderArticles(sourceArticles, sortOption);
+                        
+                        // Re-add event listeners to news items
+                        addNewsItemEventListeners();
+                    }
+                });
+            });
+            
+            // Add event listeners to news items
+            addNewsItemEventListeners();
+        }
+        
+        function renderArticles(articles, sortOption) {
+            // Sort articles based on sortOption
+            const sortedArticles = [...articles]; // Create a copy
+            
+            switch(sortOption) {
+                case 'time':
+                    sortedArticles.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+                    break;
+                case 'likes':
+                    sortedArticles.sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+                    break;
+                case 'comments':
+                    sortedArticles.sort((a, b) => (b.comments_count || 0) - (a.comments_count || 0));
+                    break;
+            }
+            
+            return sortedArticles.map((article, index) => {
+                const articleDate = new Date(article.published_at);
+                const articleTime = `${articleDate.toLocaleDateString()} ${articleDate.toLocaleTimeString()}`;
+                
+                return `
+                    <div class="news-item" data-id="${article.id}">
+                        <h5>
+                            <span class="news-number">${index + 1}.</span> 
+                            <span>${article.title}</span>
+                        </h5>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>发布时间: ${articleTime}</span>
+                            <span>
+                                ${article.likes_count ? `<span class="me-2">👍 ${article.likes_count}</span>` : ''}
+                                ${article.comments_count ? `<span>💬 ${article.comments_count}</span>` : ''}
+                            </span>
+                        </div>
+                        <div class="summary">
+                            ${article.summary ? `<p>${article.summary}</p>` : '<p>No summary available</p>'}
+                            <div class="text-end">
+                                <a href="${article.url}" target="_blank" class="btn btn-sm btn-primary">阅读原文</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function addNewsItemEventListeners() {
+            // Add event listeners to news item titles
+            document.querySelectorAll('.news-item h5').forEach(title => {
+                title.addEventListener('click', function() {
+                    const newsItem = this.closest('.news-item');
+                    const summary = newsItem.querySelector('.summary');
+                    
+                    // Toggle summary visibility
+                    if (summary.style.display === 'block') {
+                        summary.style.display = 'none';
+                    } else {
+                        // Hide all other summaries
+                        document.querySelectorAll('.news-item .summary').forEach(s => {
+                            s.style.display = 'none';
+                        });
+                        
+                        summary.style.display = 'block';
+                    }
+                });
+            });
+        }
+        
+        function refreshSource(sourceId, category) {
+            // 找到对应的新闻列表容器
+            const newsListContainer = document.getElementById(`news-list-${sourceId}`);
+            if (!newsListContainer) return;
+
+            // 显示加载状态
+            newsListContainer.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span class="ms-2">加载中...</span>
+                </div>
+            `;
+            
+            // 调用API刷新特定源的新闻
+            fetch(`/api/news/source/${sourceId}?category=${category}&refresh=true`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(articles => {
+                    if (!articles || articles.length === 0) {
+                        newsListContainer.innerHTML = `
+                            <div class="alert alert-info">
+                                暂无新闻，请稍后再试。
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // 更新文章列表
+                    newsListContainer.innerHTML = renderArticles(articles, 'time');
+                    
+                    // 更新最后更新时间
+                    const lastUpdated = new Date(Math.max(...articles.map(a => new Date(a.published_at))));
+                    const formattedDate = `${lastUpdated.toLocaleDateString()} ${lastUpdated.toLocaleTimeString()}`;
+                    
+                    const timestampElement = document.querySelector(`#source-${sourceId} .source-title-area small`);
+                    if (timestampElement) {
+                        timestampElement.textContent = `最近更新: ${formattedDate}`;
+                    }
+                    
+                    // 添加事件监听器
+                    addNewsItemEventListeners();
+                    
+                    // 更新下拉菜单事件监听器
+                    document.querySelectorAll(`#source-${sourceId} .source-sort-select`).forEach(select => {
+                        select.addEventListener('change', function() {
+                            const sortOption = this.value;
+                            newsListContainer.innerHTML = renderArticles(articles, sortOption);
+                            addNewsItemEventListeners();
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error refreshing source news:', error);
+                    newsListContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            刷新失败: ${error.message}. 请稍后再试。
+                        </div>
+                    `;
+                });
+        }
+    </script>
+</body>
+</html> 
