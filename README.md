@@ -1,4 +1,4 @@
-# NewsNow - Real-time News Aggregator
+# NewsStation - Real-time News Aggregator
 
 A Python-based news aggregator that collects news from various sources and presents them in a clean, organized interface.
 
